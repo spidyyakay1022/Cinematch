@@ -1,1 +1,1 @@
-"""CineMatch AI recommendation package."""\n
+"""CineMatch AI recommendation package."""
