@@ -57,12 +57,12 @@ class CineMatchEngine:
         self,
         tmdb_token: str | None = None,
         gemini_api_key: str | None = None,
-        gemini_model: str = "gemini-2.5-flash",
+        gemini_model: str | None = None,
         timeout: float = 20.0,
     ):
         self.tmdb_token = tmdb_token or os.getenv("TMDB_READ_ACCESS_TOKEN")
         self.gemini_api_key = gemini_api_key or os.getenv("GEMINI_API_KEY")
-        self.gemini_model = gemini_model
+        self.gemini_model = gemini_model or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
         self.timeout = timeout
 
     def _tmdb_get(self, path: str, params: dict[str, Any] | None = None) -> dict:
