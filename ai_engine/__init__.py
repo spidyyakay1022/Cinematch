@@ -1,0 +1,1 @@
+"""CineMatch AI recommendation package."""
