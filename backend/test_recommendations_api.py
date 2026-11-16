@@ -1,10 +1,18 @@
+import sys
 import unittest
+from pathlib import Path
 from unittest.mock import patch
+
+# main.py imports db/services as backend-local modules. Add backend/ for tests
+# launched from the repository root.
+BACKEND_DIR = str(Path(__file__).resolve().parent)
+if BACKEND_DIR not in sys.path:
+    sys.path.insert(0, BACKEND_DIR)
 
 from fastapi import HTTPException
 
-from backend.main import recommend_personalized
-from backend.schemas import EngineRecommendationRequest
+from main import recommend_personalized
+from schemas import EngineRecommendationRequest
 from ai_engine.recommender import CineMatchError
 
 
@@ -32,7 +40,7 @@ class FakeEngine:
 
 
 class PersonalizedRecommendationRouteTests(unittest.TestCase):
-    @patch("backend.main.CineMatchEngine", return_value=FakeEngine())
+    @patch("main.CineMatchEngine", return_value=FakeEngine())
     def test_route_returns_engine_result(self, engine_class):
         request = EngineRecommendationRequest(
             message="A science fiction movie", limit=3
@@ -43,7 +51,7 @@ class PersonalizedRecommendationRouteTests(unittest.TestCase):
         self.assertEqual(response["recommendations"][0]["id"], 123)
         engine_class.assert_called_once_with()
 
-    @patch("backend.main.CineMatchEngine")
+    @patch("main.CineMatchEngine")
     def test_unconfigured_engine_returns_503(self, engine_class):
         engine_class.return_value.recommend.side_effect = CineMatchError(
             "TMDB_READ_ACCESS_TOKEN is not configured."
