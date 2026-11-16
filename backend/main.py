@@ -1,9 +1,17 @@
 import os
+import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from dotenv import load_dotenv
 
 load_dotenv()  # must run before services/db read the environment
+
+# The backend is often launched with its directory as the working directory.
+# Add the repository root so the sibling ai_engine package can be imported.
+REPO_ROOT = str(Path(__file__).resolve().parent.parent)
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query
@@ -11,9 +19,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import db
 import services
+from ai_engine.recommender import CineMatchEngine, CineMatchError
 from schemas import (
-    ChatRequest, ChatResponse, CompareResponse, Movie, MoodRequest,
-    RecommendationResponse, WatchlistAdd,
+    ChatRequest, ChatResponse, CompareResponse, EngineRecommendationRequest,
+    EngineRecommendationResponse, Movie, MoodRequest, RecommendationResponse,
+    WatchlistAdd,
 )
 
 
@@ -23,7 +33,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="CineMatch AI API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="CineMatch AI API", version="1.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -86,6 +96,26 @@ async def recommend_mood(req: MoodRequest):
     except (httpx.HTTPError, ValueError, KeyError) as e:
         raise upstream_error(e)
     return RecommendationResponse(recommendations=recs)
+
+
+@app.post("/api/recommendations", response_model=EngineRecommendationResponse)
+def recommend_personalized(req: EngineRecommendationRequest):
+    """Use the advanced natural-language engine to return ranked TMDB movies.
+
+    The engine currently uses synchronous httpx calls, so this route intentionally
+    uses a regular def; FastAPI runs it in its worker thread pool instead of
+    blocking the event loop.
+    """
+    engine = CineMatchEngine()
+    try:
+        result = engine.recommend(req.message, limit=req.limit)
+    except CineMatchError as e:
+        status_code = 503 if "is not configured" in str(e) else 502
+        raise HTTPException(
+            status_code=status_code,
+            detail=f"Recommendation engine unavailable: {e}",
+        ) from e
+    return result
 
 
 @app.post("/api/chat", response_model=ChatResponse)
