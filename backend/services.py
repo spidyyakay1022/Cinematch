@@ -7,7 +7,7 @@ from backend.schemas import Movie
 TMDB_BASE = "https://api.themoviedb.org/3"
 IMG_BASE = "https://image.tmdb.org/t/p/w500"
 TMDB_READ_ACCESS_TOKEN = os.getenv("TMDB_READ_ACCESS_TOKEN")
-TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+TMDB_API_KEY = os.getenv("TMDB_API_KEY")  # Backward compatibility for older local .env files.
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 GEMINI_URL = (
@@ -23,25 +23,13 @@ GENRE_NAMES = {
     53: "Thriller", 10752: "War", 37: "Western",
 }
 
-MOCK_MOVIES = [
-    Movie(id=27205, title="Inception", year="2010", rating=8.4,
-          overview="A thief who steals secrets through dreams takes on one last job.",
-          genres=["Science Fiction", "Thriller"]),
-    Movie(id=13, title="Forrest Gump", year="1994", rating=8.5,
-          overview="The life story of a kind man who witnesses history.",
-          genres=["Drama", "Romance"]),
-    Movie(id=129, title="Spirited Away", year="2001", rating=8.5,
-          overview="A girl enters a world of spirits to save her parents.",
-          genres=["Animation", "Fantasy"]),
-]
-
 
 def _tmdb_auth() -> tuple[dict, dict]:
     if TMDB_READ_ACCESS_TOKEN:
         return {"Authorization": f"Bearer {TMDB_READ_ACCESS_TOKEN}"}, {}
     if TMDB_API_KEY:
         return {}, {"api_key": TMDB_API_KEY}
-    return {}, {}
+    raise RuntimeError("TMDB_READ_ACCESS_TOKEN is not configured.")
 
 
 def _to_movie(data: dict) -> Movie:
@@ -52,10 +40,10 @@ def _to_movie(data: dict) -> Movie:
         genres = [g["name"] for g in data["genres"]]
     return Movie(
         id=data["id"],
-        title=data.get("title", "Unknown"),
+        title=data.get("title") or "Unknown",
         year=(data.get("release_date") or "")[:4] or None,
         rating=data.get("vote_average"),
-        overview=data.get("overview"),
+        overview=data.get("overview") or "",
         poster_url=f"{IMG_BASE}{poster}" if poster else None,
         genres=genres,
     )
@@ -63,10 +51,6 @@ def _to_movie(data: dict) -> Movie:
 
 async def search_movies(query: str) -> list[Movie]:
     headers, auth_params = _tmdb_auth()
-    if not headers and not auth_params:
-        q = query.lower()
-        hits = [movie for movie in MOCK_MOVIES if q in movie.title.lower()]
-        return hits or MOCK_MOVIES
     async with httpx.AsyncClient(timeout=10) as client:
         response = await client.get(
             f"{TMDB_BASE}/search/movie",
@@ -79,8 +63,6 @@ async def search_movies(query: str) -> list[Movie]:
 
 async def get_movie(movie_id: int) -> Movie | None:
     headers, auth_params = _tmdb_auth()
-    if not headers and not auth_params:
-        return next((movie for movie in MOCK_MOVIES if movie.id == movie_id), None)
     async with httpx.AsyncClient(timeout=10) as client:
         response = await client.get(
             f"{TMDB_BASE}/movie/{movie_id}",
@@ -103,7 +85,8 @@ async def _gemini(prompt: str) -> str:
             json={"contents": [{"parts": [{"text": prompt}]}]},
         )
         response.raise_for_status()
-        return response.json()["candidates"][0]["content"]["parts"][0]["text"]
+        data = response.json()
+        return data["candidates"][0]["content"]["parts"][0]["text"]
 
 
 async def compare_summary(a: Movie, b: Movie) -> str:
