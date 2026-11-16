@@ -13,7 +13,7 @@ const PROMPTS = [
 export default function Chat() {
   const location = useLocation();
   const [messages, setMessages] = useState([
-    { role: "assistant", text: "Hi! I'm CineMatch. Tell me your mood, a genre, or a movie you loved, and I'll find something for you." },
+    { role: "assistant", text: "Hi! I'm CineMatch. Tell me what kind of movie you want to watch." },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,7 +24,6 @@ export default function Chat() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  // If the user came from a mood chip on the Home page, ask straight away.
   useEffect(() => {
     const mood = location.state?.mood;
     if (mood && !startedRef.current) {
@@ -37,20 +36,16 @@ export default function Chat() {
   async function send(text) {
     const message = text.trim();
     if (!message || loading) return;
-    const history = messages.map((m) => ({ role: m.role, content: m.text }));
     setMessages((prev) => [...prev, { role: "user", text: message }]);
     setInput("");
     setLoading(true);
     try {
-      const data = await api.chat(message, history);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          text: data.reply || data.message || "Here is what I found.",
-          movies: toList(data.movies ? data.movies : data.recommendations).map(normalizeMovie),
-        },
-      ]);
+      const data = await api.chat(message);
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        text: data.reply || "Here is what I found.",
+        movies: toList(data.movies).map(normalizeMovie),
+      }]);
     } catch (e) {
       setMessages((prev) => [...prev, { role: "assistant", text: `Sorry, ${e.message}` }]);
     } finally {
@@ -62,36 +57,20 @@ export default function Chat() {
     <>
       <h1>AI Chat</h1>
       <div className="chips" style={{ marginBottom: 12 }}>
-        {PROMPTS.map((p) => (
-          <button key={p} className="chip" onClick={() => send(p)}>{p}</button>
-        ))}
+        {PROMPTS.map((p) => <button key={p} className="chip" onClick={() => send(p)} disabled={loading}>{p}</button>)}
       </div>
-
       <div className="chat-box">
         {messages.map((m, i) => (
           <div key={i} style={{ display: "flex", flexDirection: "column" }}>
             <div className={`bubble ${m.role}`}>{m.text}</div>
-            {m.movies?.length > 0 && (
-              <div className="chat-movies"><MovieGrid movies={m.movies} /></div>
-            )}
+            {m.movies?.length > 0 && <div className="chat-movies"><MovieGrid movies={m.movies} /></div>}
           </div>
         ))}
         {loading && <div className="bubble assistant">Thinking…</div>}
         <div ref={bottomRef} />
       </div>
-
-      <form
-        className="chat-input"
-        onSubmit={(e) => {
-          e.preventDefault();
-          send(input);
-        }}
-      >
-        <input
-          placeholder="Describe what you want to watch…"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-        />
+      <form className="chat-input" onSubmit={(e) => { e.preventDefault(); send(input); }}>
+        <input placeholder="Describe what you want to watch…" value={input} onChange={(e) => setInput(e.target.value)} />
         <button type="submit" disabled={loading || !input.trim()}>Send</button>
       </form>
     </>
