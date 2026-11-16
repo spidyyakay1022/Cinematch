@@ -5,6 +5,7 @@ import { MOODS } from "../components/MoodPicker.jsx";
 import { Loading, ErrorBox } from "../components/Status.jsx";
 
 export default function GroupMatch() {
+  const [groupDraft, setGroupDraft] = useState("");
   const [groupName, setGroupName] = useState("");
   const [members, setMembers] = useState([]);
   const [form, setForm] = useState({ member_name: "", preferred_mood: "Happy" });
@@ -14,7 +15,7 @@ export default function GroupMatch() {
 
   function create(e) {
     e.preventDefault();
-    if (groupName.trim()) setGroupName(groupName.trim());
+    if (groupDraft.trim()) setGroupName(groupDraft.trim());
   }
 
   function addMember(e) {
@@ -52,7 +53,7 @@ export default function GroupMatch() {
       {!groupName ? (
         <form className="card-box row" onSubmit={create}>
           <label style={{ flex: 1 }}>Group name
-            <input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="e.g. Friday movie night" />
+            <input value={groupDraft} onChange={(e) => setGroupDraft(e.target.value)} placeholder="e.g. Friday movie night" />
           </label>
           <button type="submit">Start group</button>
         </form>
