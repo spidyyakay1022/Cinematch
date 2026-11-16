@@ -55,7 +55,7 @@ TMDB is the source of truth for movie records and metadata. Gemini interprets us
 Run the offline recommendation-engine tests from the repository root:
 
 ```bash
-python -m unittest ai_engine.test_recommender
+python -m unittest ai_engine.test_recommender backend.test_api_helpers
 ```
 
 Live API checks require valid TMDB and Gemini credentials. Do not paste API keys into issues, commits, or frontend code.
