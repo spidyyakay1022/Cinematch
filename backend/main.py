@@ -3,18 +3,21 @@ from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 
-load_dotenv()  # must run before services/db read the environment
+load_dotenv()
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 
-import db
-import services
-from schemas import (
+from ai_engine.recommender import CineMatchEngine
+from backend import db, services
+from backend.schemas import (
     ChatRequest, ChatResponse, CompareResponse, Movie, MoodRequest,
-    RecommendationResponse, WatchlistAdd,
+    Recommendation, RecommendationResponse, WatchlistAdd,
 )
+
+engine = CineMatchEngine()
 
 
 @asynccontextmanager
@@ -23,11 +26,16 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="CineMatch AI API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="CineMatch AI API", version="1.1.0", lifespan=lifespan)
 
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv("FRONTEND_ORIGIN", "http://localhost:5173").split(",")
+    if origin.strip()
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")],
+    allow_origins=allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -37,16 +45,45 @@ def upstream_error(e: Exception) -> HTTPException:
     return HTTPException(status_code=502, detail=f"Upstream service error: {e}")
 
 
+def _to_movie(item: dict) -> Movie:
+    genre_names = {
+        28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy",
+        80: "Crime", 99: "Documentary", 18: "Drama", 10751: "Family",
+        14: "Fantasy", 36: "History", 27: "Horror", 10402: "Music",
+        9648: "Mystery", 10749: "Romance", 878: "Science Fiction",
+        53: "Thriller", 10752: "War", 37: "Western",
+    }
+    poster_path = item.get("poster_path")
+    return Movie(
+        id=item["id"],
+        title=item.get("title") or "Untitled",
+        year=(item.get("release_date") or "")[:4] or None,
+        rating=item.get("vote_average"),
+        overview=item.get("overview") or "",
+        poster_url=f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else None,
+        genres=[genre_names[g] for g in item.get("genre_ids", []) if g in genre_names],
+    )
+
+
+def _to_recommendations(result: dict) -> list[Recommendation]:
+    recommendations = []
+    for item in result.get("recommendations", []):
+        recommendations.append(Recommendation(
+            movie=_to_movie(item),
+            reason=item.get("why_recommended") or "Matched against your movie preferences.",
+        ))
+    return recommendations
+
+
 @app.get("/api/health")
 async def health():
     return {
         "status": "ok",
-        "tmdb": bool(services.TMDB_KEY),
-        "gemini": bool(services.GEMINI_KEY),
+        "tmdb": bool(os.getenv("TMDB_READ_ACCESS_TOKEN") or os.getenv("TMDB_API_KEY")),
+        "gemini": bool(os.getenv("GEMINI_API_KEY")),
     }
 
 
-# ---------- Movies ----------
 @app.get("/api/movies/search", response_model=list[Movie])
 async def search(q: str = Query(..., min_length=1)):
     try:
@@ -78,26 +115,29 @@ async def movie_detail(movie_id: int):
     return movie
 
 
-# ---------- AI ----------
 @app.post("/api/recommend/mood", response_model=RecommendationResponse)
 async def recommend_mood(req: MoodRequest):
     try:
-        recs = await services.recommend_by_mood(req.mood, req.limit)
-    except (httpx.HTTPError, ValueError, KeyError) as e:
+        result = await run_in_threadpool(engine.recommend, req.mood, req.limit)
+        return RecommendationResponse(recommendations=_to_recommendations(result))
+    except Exception as e:
         raise upstream_error(e)
-    return RecommendationResponse(recommendations=recs)
 
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest):
     try:
-        reply, movies = await services.chat_search(req.message)
-    except (httpx.HTTPError, ValueError, KeyError) as e:
+        result = await run_in_threadpool(engine.recommend, req.message, 8)
+        movies = _to_recommendations(result)
+        if movies:
+            reply = f"I found {len(movies)} movies that match your request."
+        else:
+            reply = "I couldn't find a strong match. Try changing your mood, genre, or language."
+        return ChatResponse(reply=reply, movies=[item.movie for item in movies])
+    except Exception as e:
         raise upstream_error(e)
-    return ChatResponse(reply=reply, movies=movies)
 
 
-# ---------- Watchlist ----------
 @app.get("/api/watchlist")
 async def list_watchlist():
     return db.get_watchlist()
