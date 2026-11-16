@@ -26,7 +26,14 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="CineMatch AI API", version="1.1.0", lifespan=lifespan)
+app = FastAPI(
+    title="CineMatch AI API",
+    version="1.1.0",
+    lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+)
 
 allowed_origins = [
     origin.strip()
@@ -76,6 +83,18 @@ def _to_recommendations(result: dict) -> list[Recommendation]:
             reason=item.get("why_recommended") or "Matched against your movie preferences.",
         ))
     return recommendations
+
+
+@app.get("/", tags=["System"])
+async def root():
+    """Basic API landing page with links to interactive documentation."""
+    return {
+        "name": "CineMatch AI API",
+        "status": "running",
+        "docs": "/docs",
+        "redoc": "/redoc",
+        "health": "/api/health",
+    }
 
 
 @app.get("/api/health")
