@@ -13,9 +13,8 @@ export default function Home() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    api
-      .searchMovies({ sort_by: "popularity" })
-      .then((d) => setFeatured(toList(d).slice(0, 8).map(normalizeMovie)))
+    api.searchMovies("Inception")
+      .then((data) => setFeatured(toList(data).slice(0, 8).map(normalizeMovie)))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
@@ -31,24 +30,18 @@ export default function Home() {
         <h1>Find your mood. Discover your movie.</h1>
         <p>Tell CineMatch what you feel like watching and get recommendations with reasons.</p>
         <form className="search-row" onSubmit={search}>
-          <input
-            placeholder="Search a movie, or try “something like Interstellar”"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
+          <input placeholder="Search for a movie title…" value={query} onChange={(e) => setQuery(e.target.value)} />
           <button type="submit">Search</button>
         </form>
       </section>
-
       <section className="card-box">
         <h2>How are you feeling?</h2>
         <MoodPicker onSelect={(mood) => navigate("/chat", { state: { mood } })} />
       </section>
-
       <section style={{ marginTop: 28 }}>
-        <h2>Featured movies</h2>
+        <h2>Try a movie search</h2>
         <ErrorBox message={error} />
-        {loading ? <Loading /> : <MovieGrid movies={featured} empty="Featured movies will appear here." />}
+        {loading ? <Loading /> : <MovieGrid movies={featured} empty="Search for a movie above to get started." />}
       </section>
     </>
   );
