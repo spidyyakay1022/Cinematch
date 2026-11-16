@@ -102,7 +102,7 @@ async def compare(a: int, b: int):
         if not movie_a or not movie_b:
             raise HTTPException(404, "One or both movies not found")
         summary = await services.compare_summary(movie_a, movie_b)
-    except httpx.HTTPError as e:
+    except (httpx.HTTPError, RuntimeError) as e:
         raise upstream_error(e)
     return CompareResponse(movies=[movie_a, movie_b], summary=summary)
 
