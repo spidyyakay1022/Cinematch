@@ -7,7 +7,7 @@ export default function MovieCard({ movie, onRemove, onToggleWatched }) {
 
   async function save() {
     try {
-      await api.addToWatchlist(movie.id);
+      await api.addToWatchlist(movie);
       setMsg("Added to watchlist ✓");
     } catch (e) {
       setMsg(e.message);
