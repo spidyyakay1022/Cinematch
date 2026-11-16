@@ -6,44 +6,41 @@ import MoodPicker from "../components/MoodPicker.jsx";
 import { Loading, ErrorBox } from "../components/Status.jsx";
 
 const GENRES = ["Action", "Adventure", "Animation", "Comedy", "Crime", "Drama", "Fantasy", "Horror", "Mystery", "Romance", "Science Fiction", "Thriller"];
-const LANGUAGES = [["", "Any"], ["en", "English"], ["hi", "Hindi"], ["ja", "Japanese"], ["ko", "Korean"], ["fr", "French"], ["es", "Spanish"]];
-const RUNTIMES = [["", "Any"], ["0-89", "Under 90 min"], ["90-120", "90–120 min"], ["121-999", "Over 120 min"]];
 
 export default function Discover() {
   const [searchParams] = useSearchParams();
-  const [filters, setFilters] = useState({
-    q: searchParams.get("q") || "",
-    genre: "",
-    language: "",
-    runtime: "",
-    year: "",
-    min_rating: "",
-    mood: "",
-    sort_by: "popularity",
-  });
+  const [query, setQuery] = useState(searchParams.get("q") || "");
+  const [genre, setGenre] = useState("");
+  const [year, setYear] = useState("");
+  const [minRating, setMinRating] = useState("");
+  const [mood, setMood] = useState("");
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const set = (key) => (e) => setFilters((f) => ({ ...f, [key]: e.target.value }));
-
-  async function runSearch() {
+  async function runSearch(e) {
+    e?.preventDefault();
     setLoading(true);
     setError("");
-    const [minR, maxR] = filters.runtime ? filters.runtime.split("-") : ["", ""];
     try {
-      const data = await api.searchMovies({
-        query: filters.q,
-        genre: filters.genre,
-        language: filters.language,
-        min_runtime: minR === "0" ? "" : minR,
-        max_runtime: maxR === "999" ? "" : maxR,
-        year: filters.year,
-        min_rating: filters.min_rating,
-        mood: filters.mood,
-        sort_by: filters.sort_by,
+      let found;
+      if (mood) {
+        found = toList(await api.recommend(mood)).map((item) => normalizeMovie(item));
+      } else {
+        if (!query.trim()) {
+          setMovies([]);
+          setLoading(false);
+          return;
+        }
+        found = toList(await api.searchMovies(query.trim())).map(normalizeMovie);
+      }
+      const filtered = found.filter((movie) => {
+        const genreMatch = !genre || movie.genres.some((g) => g.toLowerCase() === genre.toLowerCase());
+        const yearMatch = !year || String(movie.year || "") === year;
+        const ratingMatch = !minRating || Number(movie.rating || 0) >= Number(minRating);
+        return genreMatch && yearMatch && ratingMatch;
       });
-      setMovies(toList(data).map(normalizeMovie));
+      setMovies(filtered);
     } catch (e) {
       setError(e.message);
       setMovies([]);
@@ -52,69 +49,38 @@ export default function Discover() {
     }
   }
 
-  useEffect(() => {
-    runSearch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useEffect(() => { runSearch(); /* eslint-disable-line react-hooks/exhaustive-deps */ }, []);
 
   return (
     <>
       <h1>Discover</h1>
-      <form
-        className="card-box"
-        onSubmit={(e) => {
-          e.preventDefault();
-          runSearch();
-        }}
-      >
+      <form className="card-box" onSubmit={runSearch}>
         <div className="row">
-          <label style={{ flex: 1, minWidth: 200 }}>Search
-            <input value={filters.q} onChange={set("q")} placeholder="Title or keywords" />
+          <label style={{ flex: 1, minWidth: 200 }}>Movie title
+            <input value={query} onChange={(e) => { setQuery(e.target.value); setMood(""); }} placeholder="Search a movie title" />
           </label>
           <label>Genre
-            <select value={filters.genre} onChange={set("genre")}>
-              <option value="">Any</option>
+            <select value={genre} onChange={(e) => setGenre(e.target.value)}>
+              <option value="">Any genre</option>
               {GENRES.map((g) => <option key={g}>{g}</option>)}
             </select>
           </label>
-          <label>Language
-            <select value={filters.language} onChange={set("language")}>
-              {LANGUAGES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-          </label>
-          <label>Runtime
-            <select value={filters.runtime} onChange={set("runtime")}>
-              {RUNTIMES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-          </label>
           <label>Release year
-            <input type="number" min="1900" max="2100" value={filters.year} onChange={set("year")} style={{ width: 100 }} />
+            <input type="number" min="1900" max="2100" value={year} onChange={(e) => setYear(e.target.value)} style={{ width: 110 }} />
           </label>
-          <label>Min rating
-            <select value={filters.min_rating} onChange={set("min_rating")}>
+          <label>Minimum rating
+            <select value={minRating} onChange={(e) => setMinRating(e.target.value)}>
               <option value="">Any</option>
               {[5, 6, 7, 8].map((r) => <option key={r} value={r}>{r}+</option>)}
             </select>
           </label>
-          <label>Sort by
-            <select value={filters.sort_by} onChange={set("sort_by")}>
-              <option value="popularity">Popularity</option>
-              <option value="rating">Rating</option>
-              <option value="year">Newest</option>
-            </select>
-          </label>
-          <button type="submit">Apply</button>
+          <button type="submit">Apply filters</button>
         </div>
-        <div style={{ marginTop: 14 }}>
-          <MoodPicker
-            selected={filters.mood}
-            onSelect={(m) => setFilters((f) => ({ ...f, mood: f.mood === m ? "" : m }))}
-          />
-        </div>
+        <p className="meta" style={{ marginTop: 14 }}>Or get recommendations by mood</p>
+        <MoodPicker selected={mood} onSelect={(value) => { setMood(mood === value ? "" : value); }} />
       </form>
-
       <ErrorBox message={error} />
-      {loading ? <Loading text="Searching…" /> : <MovieGrid movies={movies} empty="No movies match these filters." />}
+      {loading ? <Loading text="Searching…" /> : <MovieGrid movies={movies} empty="Enter a movie title or choose a mood to see results." />}
     </>
   );
 }
