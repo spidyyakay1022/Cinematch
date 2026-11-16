@@ -42,7 +42,10 @@ app.add_middleware(
 
 
 def upstream_error(e: Exception) -> HTTPException:
-    return HTTPException(status_code=502, detail=f"Upstream service error: {e}")
+    message = str(e)
+    if "not configured" in message:
+        return HTTPException(status_code=503, detail=message)
+    return HTTPException(status_code=502, detail=f"Upstream service error: {message}")
 
 
 def _to_movie(item: dict) -> Movie:
@@ -88,7 +91,7 @@ async def health():
 async def search(q: str = Query(..., min_length=1)):
     try:
         return await services.search_movies(q)
-    except httpx.HTTPError as e:
+    except (httpx.HTTPError, RuntimeError) as e:
         raise upstream_error(e)
 
 
@@ -108,7 +111,7 @@ async def compare(a: int, b: int):
 async def movie_detail(movie_id: int):
     try:
         movie = await services.get_movie(movie_id)
-    except httpx.HTTPError as e:
+    except (httpx.HTTPError, RuntimeError) as e:
         raise upstream_error(e)
     if not movie:
         raise HTTPException(404, "Movie not found")
