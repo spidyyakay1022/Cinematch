@@ -19,22 +19,22 @@ export default function MovieCard({ movie, onRemove, onToggleWatched }) {
       {movie.poster ? (
         <img className="poster" src={movie.poster} alt={`${movie.title} poster`} loading="lazy" />
       ) : (
-        <div className="poster">No poster</div>
+        <div className="poster" role="img" aria-label="Poster unavailable">✦<br />Poster unavailable</div>
       )}
       <div className="movie-info">
         <h3>{movie.title}</h3>
         <div className="meta">
-          {[movie.year, movie.rating ? `⭐ ${Number(movie.rating).toFixed(1)}` : null, movie.runtime ? `${movie.runtime} min` : null]
+          {[movie.year, movie.rating != null ? `★ ${Number(movie.rating).toFixed(1)}` : null, movie.runtime ? `${movie.runtime} min` : null]
             .filter(Boolean)
             .join(" · ")}
         </div>
-        {movie.genres?.length > 0 && <div className="meta">{movie.genres.join(", ")}</div>}
+        {movie.genres?.length > 0 && <div className="meta">{movie.genres.join(" · ")}</div>}
         {movie.reason && <div className="reason">{movie.reason}</div>}
         {typeof movie.score === "number" && (
           <div className="meta">Match score: {Math.round(movie.score <= 1 ? movie.score * 100 : movie.score)}%</div>
         )}
         <div className="card-actions">
-          <Link className="btn secondary" to={`/movie/${movie.id}`}>Details</Link>
+          <Link className="btn secondary" to={`/movie/${movie.id}`}>Details ↗</Link>
           {!onRemove && <button onClick={save}>+ Watchlist</button>}
           {onToggleWatched && (
             <button className="secondary" onClick={() => onToggleWatched(movie)}>
@@ -43,7 +43,7 @@ export default function MovieCard({ movie, onRemove, onToggleWatched }) {
           )}
           {onRemove && <button onClick={() => onRemove(movie)}>Remove</button>}
         </div>
-        {msg && <div className="mini-msg">{msg}</div>}
+        {msg && <div className="mini-msg" role="status">{msg}</div>}
       </div>
     </article>
   );
