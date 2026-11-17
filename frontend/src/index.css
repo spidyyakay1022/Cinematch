@@ -155,3 +155,30 @@ label { display: flex; flex-direction: column; gap: 7px; color: #c4c0dc; font-si
   .card-actions { flex-direction: column; }
   .card-actions > * { text-align: center; }
 }
+
+
+/* Floating right-side CineMatch chatbot */
+.floating-chat { position: fixed; right: 26px; bottom: 25px; z-index: 60; display: flex; flex-direction: column; align-items: flex-end; gap: 13px; }
+.floating-chat-launcher { min-height: 54px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 20px; border: 1px solid rgba(190, 158, 255, .45); border-radius: 999px; background: linear-gradient(115deg, #9253ef, #426fd5 65%, #20a6c7); box-shadow: 0 10px 34px rgba(83, 65, 190, .42), 0 0 25px rgba(53, 220, 255, .13); font-size: 14px; }
+.floating-chat-launcher.is-open { width: 48px; min-height: 48px; padding: 0; font-size: 26px; }
+.launcher-spark { font-size: 19px; }
+.floating-chat-panel { width: min(370px, calc(100vw - 32px)); height: min(530px, calc(100vh - 115px)); display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(166, 107, 255, .42); border-radius: 20px; background: #101022; box-shadow: 0 22px 75px rgba(0,0,0,.55), 0 0 35px rgba(116,75,210,.16); animation: chat-panel-in .2s ease-out; }
+@keyframes chat-panel-in { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.floating-chat-header { display: flex; align-items: center; gap: 11px; padding: 16px; border-bottom: 1px solid rgba(155,92,255,.2); background: linear-gradient(110deg, rgba(116,66,190,.28), rgba(25,111,153,.17)); }
+.floating-chat-avatar { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; background: linear-gradient(135deg,#a66bff,#27badb); font-size: 20px; }
+.floating-chat-heading { display: flex; flex: 1; flex-direction: column; gap: 3px; color: #fff; font-size: 14px; }
+.floating-chat-heading span { color: #aaa8c4; font-size: 11px; }
+.floating-chat-heading i { display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: #54e6a4; box-shadow: 0 0 8px #54e6a4; }
+.floating-chat-close { width: 30px; height: 30px; padding: 0; border: 0; background: transparent; box-shadow: none; color: #c9c4df; font-size: 23px; }
+.floating-chat-messages { flex: 1; display: flex; flex-direction: column; gap: 11px; overflow-y: auto; padding: 16px 13px; }
+.floating-chat-message { max-width: 88%; padding: 11px 13px; border-radius: 14px; color: #e8e5f7; font-size: 12px; line-height: 1.55; white-space: pre-wrap; }
+.floating-chat-message.assistant { align-self: flex-start; border: 1px solid rgba(155,92,255,.2); border-bottom-left-radius: 4px; background: #1c1b35; }
+.floating-chat-message.user { align-self: flex-end; border-bottom-right-radius: 4px; background: linear-gradient(120deg,#7043c5,#3d64b9); color: #fff; }
+.floating-chat-movie-list { display: grid; gap: 5px; margin-top: 8px; color: #8cecff; }
+.floating-chat-prompts { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 10px; }
+.floating-chat-prompts button { padding: 7px 9px; border: 1px solid rgba(155,92,255,.28); border-radius: 999px; background: rgba(155,92,255,.1); box-shadow: none; color: #d8c9ff; font-size: 10px; }
+.floating-chat-form { display: flex; gap: 8px; padding: 12px; border-top: 1px solid rgba(155,92,255,.18); }
+.floating-chat-form input { flex: 1; padding: 10px 12px; font-size: 12px; }
+.floating-chat-form button { width: 40px; flex: 0 0 40px; padding: 0; }
+.floating-chat-note { margin: 0; padding: 0 12px 10px; color: #77758f; text-align: center; font-size: 9px; }
+@media (max-width: 600px) { .floating-chat { right: 14px; bottom: 14px; } .floating-chat-panel { height: min(500px, calc(100vh - 90px)); } }
