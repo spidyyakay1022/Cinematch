@@ -194,4 +194,4 @@ label { display: flex; flex-direction: column; gap: 7px; color: #c4c0dc; font-si
   pointer-events: none;
   background: #050309;
 }
-body { background: #050309; }
+body { background: #050309; }\n#root > .navbar, #root > .container, #root > .footer { position: relative; z-index: 1; }
