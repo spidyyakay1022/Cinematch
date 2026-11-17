@@ -27,21 +27,36 @@ export default function Home() {
   return (
     <>
       <section className="hero">
-        <h1>Find your mood. Discover your movie.</h1>
-        <p>Tell CineMatch what you feel like watching and get recommendations with reasons.</p>
+        <span className="eyebrow">Your personal movie universe</span>
+        <h1>Every mood has a movie. <span>Find yours.</span></h1>
+        <p>Meet your AI-powered movie companion. Describe the vibe, explore hidden gems, and discover what to watch next.</p>
         <form className="search-row" onSubmit={search}>
-          <input placeholder="Search for a movie title…" value={query} onChange={(e) => setQuery(e.target.value)} />
-          <button type="submit">Search</button>
+          <input aria-label="Search movie title" placeholder="Search a movie, genre, or title…" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <button type="submit">Explore movies ↗</button>
         </form>
+        <div className="chips" style={{ marginTop: 18 }}>
+          <button type="button" className="chip" onClick={() => navigate("/chat")}>✦ Ask CineMatch AI</button>
+          <button type="button" className="chip" onClick={() => navigate("/discover")}>Browse discovery</button>
+        </div>
       </section>
+
       <section className="card-box">
-        <h2>How are you feeling?</h2>
+        <span className="eyebrow">Mood scanner</span>
+        <h2 style={{ margin: "10px 0 6px" }}>What are you in the mood for?</h2>
+        <p className="meta" style={{ marginTop: 0, marginBottom: 16 }}>Choose a feeling and let CineMatch find your next favourite.</p>
         <MoodPicker onSelect={(mood) => navigate("/chat", { state: { mood } })} />
       </section>
-      <section style={{ marginTop: 28 }}>
-        <h2>Try a movie search</h2>
+
+      <section style={{ marginTop: 38 }}>
+        <div style={{ display: "flex", alignItems: "end", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+          <div>
+            <span className="eyebrow">Curated for discovery</span>
+            <h2 style={{ margin: "9px 0 0" }}>Featured movie search</h2>
+          </div>
+          <button className="secondary" onClick={() => navigate("/discover")}>Explore all movies ↗</button>
+        </div>
         <ErrorBox message={error} />
-        {loading ? <Loading /> : <MovieGrid movies={featured} empty="Search for a movie above to get started." />}
+        {loading ? <Loading text="Loading featured titles…" /> : <MovieGrid movies={featured} empty="Search for a movie above to get started." />}
       </section>
     </>
   );
