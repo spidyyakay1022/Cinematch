@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar.jsx";
+import FloatingChatbot from "./components/FloatingChatbot.jsx";
 import Home from "./pages/Home.jsx";
 import Chat from "./pages/Chat.jsx";
 import Discover from "./pages/Discover.jsx";
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="*" element={<p className="status">Page not found.</p>} />
         </Routes>
       </main>
+      <FloatingChatbot />
       <footer className="footer">
         CineMatch AI · Movie data from TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB.
       </footer>
