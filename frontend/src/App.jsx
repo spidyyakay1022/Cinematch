@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar.jsx";
 import Home from "./pages/Home.jsx";
 import Chat from "./pages/Chat.jsx";
@@ -7,14 +7,20 @@ import MovieDetails from "./pages/MovieDetails.jsx";
 import Compare from "./pages/Compare.jsx";
 import Watchlist from "./pages/Watchlist.jsx";
 import GroupMatch from "./pages/GroupMatch.jsx";
+import { LoginPage, SignupPage } from "./components/ui/sign-up-page.jsx";
 
 export default function App() {
+  const location = useLocation();
+  const isAuthPage = location.pathname === "/login" || location.pathname === "/signup";
+
   return (
     <>
-      <Navbar />
-      <main className="container">
+      {!isAuthPage && <Navbar />}
+      <main className={isAuthPage ? "auth-main" : "container"}>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/discover" element={<Discover />} />
           <Route path="/movie/:id" element={<MovieDetails />} />
@@ -24,9 +30,7 @@ export default function App() {
           <Route path="*" element={<p className="status">Page not found.</p>} />
         </Routes>
       </main>
-      <footer className="footer">
-        CineMatch AI · Movie data from TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB.
-      </footer>
+      {!isAuthPage && <footer className="footer">CineMatch AI · Movie data from TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB.</footer>}
     </>
   );
 }
