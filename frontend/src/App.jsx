@@ -1,5 +1,7 @@
 import { Routes, Route, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar.jsx";
+import FloatingChatbot from "./components/FloatingChatbot.jsx";
+import NebulaBackground from "./components/NebulaBackground.jsx";
 import Home from "./pages/Home.jsx";
 import Chat from "./pages/Chat.jsx";
 import Discover from "./pages/Discover.jsx";
@@ -15,6 +17,7 @@ export default function App() {
 
   return (
     <>
+      <NebulaBackground />
       {!isAuthPage && <Navbar />}
       <main className={isAuthPage ? "auth-main" : "container"}>
         <Routes>
@@ -30,6 +33,7 @@ export default function App() {
           <Route path="*" element={<p className="status">Page not found.</p>} />
         </Routes>
       </main>
+      {!isAuthPage && <FloatingChatbot />}
       {!isAuthPage && <footer className="footer">CineMatch AI · Movie data from TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB.</footer>}
     </>
   );
