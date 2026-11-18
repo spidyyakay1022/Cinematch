@@ -1,9 +1,14 @@
 import os
 from contextlib import asynccontextmanager
 
+from pathlib import Path
+
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load backend/.env regardless of the directory used to launch Uvicorn.
+# Existing process environment variables (e.g. Render settings) take precedence.
+BACKEND_DIR = Path(__file__).resolve().parent
+load_dotenv(BACKEND_DIR / ".env")
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query
