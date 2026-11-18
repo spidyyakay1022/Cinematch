@@ -21,6 +21,10 @@ export default function Navbar() {
           <NavLink key={to} to={to} end={to === "/"}>{label}</NavLink>
         ))}
       </nav>
+      <div className="nav-auth">
+        <Link to="/login" className="nav-login">Log in</Link>
+        <Link to="/signup" className="nav-signup">Create account</Link>
+      </div>
     </header>
   );
 }
