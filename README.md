@@ -1,30 +1,39 @@
 # CineMatch AI
 
-An AI-powered movie discovery project that combines natural-language preferences, mood-based recommendations, and verified movie metadata from TMDB.
+An AI-powered movie discovery application combining natural-language preferences, mood-based recommendations, and verified movie metadata from TMDB.
 
 ## Project structure
 
 - `ai_engine/` — Gemini-powered preference extraction, TMDB discovery, ranking, and recommendation explanations.
-- `backend/` — FastAPI endpoints, movie search/comparison, and SQLite watchlist.
-- `frontend/` — planned React + Vite application (not yet present in this repository).
+- `backend/` — FastAPI endpoints, TMDB search/details, Gemini comparison, and SQLite watchlist.
+- `frontend/` — React + Vite application.
 
-## Backend setup
+## Local setup
 
-1. Create a local environment file by copying `.env.example` to `.env`.
-2. Add your TMDB API Read Access Token and Gemini API key to `.env`. Never commit this file.
-3. Install dependencies from the repository root:
+1. Copy `.env.example` to `.env` in the repository root, or create `backend/.env`. Add your own TMDB Read Access Token and Gemini API key. Never commit real credentials.
+2. Install backend dependencies from the repository root:
 
    ```bash
    python -m pip install -r backend/requirements.txt -r ai_engine/requirements.txt
    ```
 
-4. Start the API from the repository root:
+3. Start the backend from the repository root:
 
    ```bash
-   uvicorn backend.main:app --reload
+   uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
    ```
 
-5. Open the interactive API documentation at `http://127.0.0.1:8000/docs`.
+4. In another terminal, start the frontend:
+
+   ```bash
+   cd frontend
+   npm install
+   npm run dev -- --host 0.0.0.0
+   ```
+
+5. Open the Vite URL (normally `http://localhost:5173`) and API docs at `http://localhost:8000/docs`.
+
+The backend loads `backend/.env` regardless of the working directory used to launch Uvicorn. Process-level environment variables (such as Render settings) take precedence.
 
 ## Environment variables
 
@@ -33,10 +42,11 @@ An AI-powered movie discovery project that combines natural-language preferences
 - `GEMINI_MODEL` — optional Gemini model; defaults to `gemini-2.5-flash`.
 - `FRONTEND_ORIGIN` — allowed frontend origin; comma-separated origins are supported.
 - `DB_PATH` — optional SQLite database path.
+- `VITE_API_URL` — frontend API base URL. Leave blank for local Vite proxying; set it to the deployed backend URL for production.
 
-## Main API routes
+## API routes
 
-- `GET /api/health` — checks whether API credentials are configured.
+- `GET /api/health` — reports whether API credentials are configured.
 - `GET /api/movies/search?q=...` — search TMDB movies.
 - `GET /api/movies/{movie_id}` — fetch movie details.
 - `GET /api/movies/compare?a=...&b=...` — compare two movies.
@@ -48,18 +58,21 @@ An AI-powered movie discovery project that combines natural-language preferences
 
 ## AI and movie-data integrity
 
-TMDB is the source of truth for movie records and metadata. Gemini interprets user requests and writes explanations based on the TMDB records returned by the recommendation engine. The backend calls the shared `CineMatchEngine` rather than maintaining a separate recommendation implementation.
+TMDB is the source of truth for movie records and metadata. Gemini interprets user requests and writes explanations grounded in TMDB records. API credentials remain server-side and must never be exposed in frontend code.
 
 ## Tests
 
-Run the offline recommendation-engine tests from the repository root:
+Run offline unit tests from the repository root:
 
 ```bash
 python -m unittest ai_engine.test_recommender backend.test_api_helpers
 ```
 
-Live API checks require valid TMDB and Gemini credentials. Do not paste API keys into issues, commits, or frontend code.
+Live API checks require valid TMDB and Gemini credentials.
 
-## Deployment status
+## Deployment
 
-The backend and frontend still require deployment configuration. The frontend directory is not yet included in this repository.
+- `render.yaml` defines a free-tier Render blueprint for the FastAPI backend. During Render setup, provide `TMDB_READ_ACCESS_TOKEN`, `GEMINI_API_KEY`, and `FRONTEND_ORIGIN` as secret/environment values.
+- Deploy the frontend on Vercel with project root `frontend` and set `VITE_API_URL` to the deployed backend URL.
+- Set the backend `FRONTEND_ORIGIN` to the exact Vercel frontend origin.
+- The included SQLite watchlist is suitable for demos, but a free web service may have an ephemeral filesystem. Use a persistent database before relying on watchlist data in production.
