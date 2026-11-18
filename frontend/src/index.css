@@ -187,7 +187,7 @@ label { display: flex; flex-direction: column; gap: 7px; color: #c4c0dc; font-si
 .nebula-background {
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   display: block;
   width: 100%;
   height: 100%;
