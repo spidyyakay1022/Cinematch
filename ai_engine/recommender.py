@@ -39,7 +39,7 @@ GENRES = {
 MOOD_TERMS = {
     "happy": ["feel-good", "uplifting", "lighthearted"],
     "sad": ["emotional", "moving", "heartbreaking"],
-    "romantic": ["love", "relationship", "romance"],
+    "romantic": ["romantic", "love", "relationship", "romance"],
     "motivational": ["inspiring", "overcoming", "ambition"],
     "scary": ["suspenseful", "dark", "terrifying"],
     "mind-bending": ["mystery", "psychological", "twist"],
