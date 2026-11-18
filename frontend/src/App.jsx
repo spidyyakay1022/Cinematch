@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar.jsx";
 import FloatingChatbot from "./components/FloatingChatbot.jsx";
+import NebulaBackground from "./components/NebulaBackground.jsx";
 import Home from "./pages/Home.jsx";
 import Chat from "./pages/Chat.jsx";
 import Discover from "./pages/Discover.jsx";
@@ -12,6 +13,7 @@ import GroupMatch from "./pages/GroupMatch.jsx";
 export default function App() {
   return (
     <>
+      <NebulaBackground />
       <Navbar />
       <main className="container">
         <Routes>
