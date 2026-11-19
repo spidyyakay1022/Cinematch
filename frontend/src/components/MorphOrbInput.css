@@ -98,3 +98,20 @@
 @media (prefers-reduced-motion: reduce) {
   .morph-orb-send::before,.morph-orb-send::after,.morph-orb-core { animation: none; }
 }
+
+/* Override the legacy floating-chat button rules with the orb's circular geometry. */
+.floating-chat-form.morph-composer .morph-orb-send {
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  padding: 0;
+  border-radius: 50%;
+}
+.floating-chat-form.morph-composer .morph-orb-send:hover:not(:disabled) {
+  transform: scale(1.07);
+}
+.floating-chat-form.morph-composer .morph-orb-send:disabled {
+  opacity: .72;
+  cursor: wait;
+}
