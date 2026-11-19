@@ -2,10 +2,12 @@ import json
 import os
 
 import httpx
+from dotenv import load_dotenv
+load_dotenv()
 
 from schemas import Movie, Recommendation
 
-TMDB_KEY = os.getenv("TMDB_API_KEY")
+TMDB_KEY = os.getenv("TMDB_READ_ACCESS_TOKEN")
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 TMDB_BASE = "https://api.themoviedb.org/3"
 IMG_BASE = "https://image.tmdb.org/t/p/w500"
@@ -48,7 +50,8 @@ async def search_movies(query: str) -> list[Movie]:
         return hits or MOCK_MOVIES
     async with httpx.AsyncClient(timeout=10) as client:
         r = await client.get(f"{TMDB_BASE}/search/movie",
-                             params={"api_key": TMDB_KEY, "query": query})
+                             params={"query": query},
+                             headers={"Authorization": f"Bearer {TMDB_KEY}"})
         r.raise_for_status()
         return [_to_movie(d) for d in r.json().get("results", [])[:12]]
 
@@ -57,8 +60,10 @@ async def get_movie(movie_id: int) -> Movie | None:
     if not TMDB_KEY:
         return next((m for m in MOCK_MOVIES if m.id == movie_id), None)
     async with httpx.AsyncClient(timeout=10) as client:
-        r = await client.get(f"{TMDB_BASE}/movie/{movie_id}",
-                             params={"api_key": TMDB_KEY})
+        r = await client.get(
+            f"{TMDB_BASE}/movie/{movie_id}",
+            headers={"Authorization": f"Bearer {TMDB_KEY}"},
+        )
         if r.status_code == 404:
             return None
         r.raise_for_status()
