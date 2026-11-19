@@ -1,0 +1,100 @@
+/* Morphing-orb style composer adapted for CineMatch's existing React/Vite app. */
+.floating-chat-form.morph-composer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 14px;
+  border-top: 1px solid rgba(169,126,255,.22);
+  background: linear-gradient(100deg,rgba(91,48,151,.18),rgba(15,112,151,.13));
+}
+.morph-composer input {
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  padding: 0 15px;
+  border: 1px solid rgba(177,148,238,.32);
+  border-radius: 15px;
+  color: #f7f3ff;
+  background: rgba(6,8,25,.82);
+  box-shadow: inset 0 2px 8px rgba(0,0,0,.2);
+  font-size: 12px;
+}
+.morph-composer input:focus {
+  border-color: rgba(81,213,255,.78);
+  box-shadow: 0 0 0 3px rgba(81,213,255,.1),0 0 18px rgba(81,213,255,.1);
+  outline: none;
+}
+.morph-orb-send {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  overflow: visible;
+  border: 1px solid rgba(213,190,255,.55);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 25%,#e5c4ff 0,#a454ed 25%,#5968e5 62%,#20a8c9 100%);
+  box-shadow: 0 5px 22px rgba(114,75,221,.4),0 0 20px rgba(81,202,255,.18),inset 0 1px 0 rgba(255,255,255,.35);
+  transition: transform .2s ease,box-shadow .2s ease,filter .2s ease;
+}
+.morph-orb-send::before,.morph-orb-send::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border: 1px solid rgba(154,119,255,.48);
+  border-radius: 50%;
+  opacity: .5;
+  animation: cine-orb-pulse 2.4s ease-out infinite;
+  pointer-events: none;
+}
+.morph-orb-send::after { animation-delay: 1.2s; }
+.morph-orb-send:hover:not(:disabled) {
+  transform: scale(1.07);
+  filter: brightness(1.15);
+  box-shadow: 0 0 28px rgba(81,202,255,.38),0 8px 25px rgba(114,75,221,.4);
+}
+.morph-orb-send:disabled { opacity: .72; }
+.morph-orb-core {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%,#fff 0,#d8c4ff 17%,#8b55e8 48%,#39d7ed 100%);
+  box-shadow: 0 0 12px #d8c4ff,0 0 22px rgba(83,216,255,.9);
+  animation: cine-orb-float 2.8s ease-in-out infinite;
+}
+.morph-orb-send.is-thinking .morph-orb-core {
+  animation: cine-orb-think .8s linear infinite;
+  box-shadow: 0 0 15px #fff,0 0 30px #b875ff,0 0 42px rgba(53,220,255,.9);
+}
+.morph-orb-send.is-thinking::before,.morph-orb-send.is-thinking::after {
+  animation-duration: .9s;
+  border-color: rgba(76,224,255,.8);
+}
+.morph-composer-status {
+  min-height: 16px;
+  padding: 0 16px 8px;
+  color: #aaa0ca;
+  text-align: right;
+  font-size: 9px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+@keyframes cine-orb-pulse {
+  0% { transform: scale(.78); opacity: .65; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+@keyframes cine-orb-float {
+  0%,100% { transform: translateY(0) scale(.94); }
+  50% { transform: translateY(-3px) scale(1.08); }
+}
+@keyframes cine-orb-think {
+  0% { transform: rotate(0) scale(.8); filter: hue-rotate(0); }
+  50% { transform: rotate(180deg) scale(1.16); filter: hue-rotate(80deg); }
+  100% { transform: rotate(360deg) scale(.8); filter: hue-rotate(160deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .morph-orb-send::before,.morph-orb-send::after,.morph-orb-core { animation: none; }
+}
