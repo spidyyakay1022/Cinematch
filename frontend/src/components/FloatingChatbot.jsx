@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
+import "./MorphOrbInput.css";
 
 const starterPrompts = [
   "Recommend a mind-bending movie",
@@ -85,15 +86,16 @@ export default function FloatingChatbot() {
             </div>
           )}
 
-          <form className="floating-chat-form" onSubmit={(event) => { event.preventDefault(); send(input); }}>
+          <form className="floating-chat-form morph-composer" onSubmit={(event) => { event.preventDefault(); send(input); }}>
             <input
               aria-label="Message CineMatch AI"
-              placeholder="Ask for a movie..."
+              placeholder="Ask anything about movies..."
               value={input}
               onChange={(event) => setInput(event.target.value)}
             />
-            <button type="submit" aria-label="Send message" disabled={loading || !input.trim()}>➤</button>
+            <button type="submit" className={`morph-orb-send ${loading ? "is-thinking" : ""}`} aria-label={loading ? "CineMatch is thinking" : "Send message"} disabled={loading || !input.trim()}><span className="morph-orb-core" /></button>
           </form>
+          <p className="morph-composer-status" aria-live="polite">{loading ? "Thinking · Searching · Finding your next watch" : "AI movie companion · Press enter to send"}</p>
           <p className="floating-chat-note">Powered by your CineMatch movie assistant</p>
         </section>
       )}
