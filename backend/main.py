@@ -1,9 +1,18 @@
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load environment files relative to this file, not the process working
+# directory. This supports both:
+#   - repository-root .env
+#   - backend/.env
+# Existing process environment variables take precedence.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+BACKEND_DIR = Path(__file__).resolve().parent
+load_dotenv(PROJECT_ROOT / ".env", override=False)
+load_dotenv(BACKEND_DIR / ".env", override=False)
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query
