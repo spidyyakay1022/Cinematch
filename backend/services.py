@@ -1,13 +1,18 @@
 import os
+from pathlib import Path
 
 import httpx
 from dotenv import load_dotenv
-load_dotenv()
+
+# Keep this module safe to import directly in tests/scripts as well as through
+# backend.main. Resolve env files from the repository, never from cwd.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+BACKEND_DIR = Path(__file__).resolve().parent
+load_dotenv(PROJECT_ROOT / ".env", override=False)
+load_dotenv(BACKEND_DIR / ".env", override=False)
 
 from backend.schemas import Movie
 
-TMDB_KEY = os.getenv("TMDB_READ_ACCESS_TOKEN")
-GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 TMDB_BASE = "https://api.themoviedb.org/3"
 IMG_BASE = "https://image.tmdb.org/t/p/w500"
 TMDB_READ_ACCESS_TOKEN = os.getenv("TMDB_READ_ACCESS_TOKEN")
@@ -29,8 +34,12 @@ GENRE_NAMES = {
 
 
 def _tmdb_auth() -> tuple[dict, dict]:
+    """Return TMDB auth using the preferred Bearer token or legacy API key."""
     if TMDB_READ_ACCESS_TOKEN:
-        return {"Authorization": f"Bearer {TMDB_READ_ACCESS_TOKEN}"}, {}
+        return {
+            "Authorization": f"Bearer {TMDB_READ_ACCESS_TOKEN}",
+            "Accept": "application/json",
+        }, {}
     if TMDB_API_KEY:
         return {}, {"api_key": TMDB_API_KEY}
     raise RuntimeError("TMDB_READ_ACCESS_TOKEN is not configured.")
@@ -56,11 +65,6 @@ def _to_movie(data: dict) -> Movie:
 async def search_movies(query: str) -> list[Movie]:
     headers, auth_params = _tmdb_auth()
     async with httpx.AsyncClient(timeout=10) as client:
-        r = await client.get(f"{TMDB_BASE}/search/movie",
-                             params={"query": query},
-                             headers={"Authorization": f"Bearer {TMDB_KEY}"})
-        r.raise_for_status()
-        return [_to_movie(d) for d in r.json().get("results", [])[:12]]
         response = await client.get(
             f"{TMDB_BASE}/search/movie",
             headers=headers,
