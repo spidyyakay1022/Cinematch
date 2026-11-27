@@ -131,7 +131,7 @@ User request: {user_text!r}"""
             extracted_query = str(data.get("query") or "").strip()
             # Gemini must not turn a whole natural-language request into a title.
             explicit_title = re.search(
-                r"(?:similar to|like)\\s+([A-Z][A-Za-z0-9:' -]{1,50}?)(?:[.!?,]|$)",
+                r"(?:similar to|like)\s+([A-Z][A-Za-z0-9:' -]{1,50}?)(?:[.!?,]|$)",
                 user_text,
             )
             if not explicit_title or extracted_query.lower() == user_text.lower():
