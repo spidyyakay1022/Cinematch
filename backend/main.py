@@ -135,6 +135,14 @@ async def compare(a: int, b: int):
     return CompareResponse(movies=[movie_a, movie_b], summary=summary)
 
 
+@app.get("/api/movies/featured", response_model=list[Movie])
+async def featured(limit: int = Query(20, ge=1, le=40)):
+    try:
+        return await services.featured_movies(limit)
+    except (httpx.HTTPError, RuntimeError) as e:
+        raise upstream_error(e)
+
+
 @app.get("/api/movies/{movie_id}", response_model=Movie)
 async def movie_detail(movie_id: int):
     try:
