@@ -56,6 +56,7 @@ export const api = {
     request("/api/recommend/mood", { method: "POST", body: JSON.stringify({ mood, limit }) }),
   searchMovies: (query) =>
     request(`/api/movies/search?q=${encodeURIComponent(query)}`),
+  getFeaturedMovies: (limit = 20) => request(`/api/movies/featured?limit=${limit}`),
   getMovie: (id) => request(`/api/movies/${id}`),
   compare: (ids) => {
     if (!Array.isArray(ids) || ids.length !== 2) throw new Error("Select exactly two movies to compare.");
