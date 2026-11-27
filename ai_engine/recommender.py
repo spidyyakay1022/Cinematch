@@ -128,8 +128,18 @@ User request: {user_text!r}"""
         try:
             raw = self._gemini(prompt, json_mode=True)
             data = json.loads(raw)
+            extracted_query = str(data.get("query") or "").strip()
+            # Gemini must not turn a whole natural-language request into a title.
+            explicit_title = re.search(
+                r"(?:similar to|like)\\s+([A-Z][A-Za-z0-9:' -]{1,50}?)(?:[.!?,]|$)",
+                user_text,
+            )
+            if not explicit_title or extracted_query.lower() == user_text.lower():
+                extracted_query = ""
+            elif extracted_query and extracted_query.lower() not in user_text.lower():
+                extracted_query = explicit_title.group(1).strip()
             return Preferences(
-                query=str(data.get("query") or ""),
+                query=extracted_query,
                 moods=[str(x).lower() for x in data.get("moods", [])][:5],
                 genres=[str(x).lower() for x in data.get("genres", [])][:8],
                 language=data.get("language"),
