@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { api } from "../api.js";
+import { api, normalizeMovie } from "../api.js";
+import { Link } from "react-router-dom";
 
 const starterPrompts = [
   "Recommend a mind-bending movie",
@@ -28,15 +29,15 @@ export default function FloatingChatbot() {
     setLoading(true);
     try {
       const result = await api.chat(message);
-      const movieTitles = (result.movies || result.recommendations || [])
-        .map((movie) => movie.title || movie.name)
-        .filter(Boolean);
+      const movieCards = (result.movies || result.recommendations || [])
+        .map(normalizeMovie)
+        .filter((movie) => movie?.id && movie.title);
       setMessages((current) => [
         ...current,
         {
           role: "assistant",
           text: result.reply || "Here are a few ideas for your next movie night.",
-          movies: movieTitles,
+          movies: movieCards,
         },
       ]);
     } catch (error) {
@@ -68,7 +69,15 @@ export default function FloatingChatbot() {
                 {message.text}
                 {message.movies?.length > 0 && (
                   <div className="floating-chat-movie-list">
-                    {message.movies.map((title) => <span key={title}>🎬 {title}</span>)}
+                    {message.movies.map((movie) => (
+                      <Link key={movie.id} to={`/movie/${movie.id}`} className="floating-chat-movie">
+                        {movie.poster
+                          ? <img src={movie.poster} alt={`${movie.title} poster`} loading="lazy" />
+                          : <span className="floating-chat-poster-fallback">🎬</span>}
+                        <span>{movie.title}</span>
+                        {movie.year && <small>{movie.year}</small>}
+                      </Link>
+                    ))}
                   </div>
                 )}
               </div>
