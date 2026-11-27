@@ -13,8 +13,8 @@ export default function Home() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    api.searchMovies("Inception")
-      .then((data) => setFeatured(toList(data).slice(0, 8).map(normalizeMovie)))
+    api.getFeaturedMovies(20)
+      .then((data) => setFeatured(toList(data).map(normalizeMovie).filter((movie) => movie?.poster)))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
@@ -51,7 +51,7 @@ export default function Home() {
         <div style={{ display: "flex", alignItems: "end", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <div>
             <span className="eyebrow">Curated for discovery</span>
-            <h2 style={{ margin: "9px 0 0" }}>Featured movie search</h2>
+            <h2 style={{ margin: "9px 0 0" }}>Featured movies</h2>
           </div>
           <button className="secondary" onClick={() => navigate("/discover")}>Explore all movies ↗</button>
         </div>
