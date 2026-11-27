@@ -75,33 +75,47 @@ async def search_movies(query: str) -> list[Movie]:
         return [_to_movie(item) for item in response.json().get("results", [])[:12]]
 
 
-async def featured_movies(limit: int = 20) -> list[Movie]:
-    """Return a balanced, deduplicated mix of popular Hindi and English films."""
+async def featured_movies(limit: int = 25) -> list[Movie]:
+    """Return 5 Japanese anime, 10 Hindi films, then 10 English-language films."""
     headers, auth_params = _tmdb_auth()
-    params = {"include_adult": "false", "sort_by": "popularity.desc", "page": 1}
-    async with httpx.AsyncClient(timeout=15) as client:
-        responses = await asyncio.gather(
+    base = {"include_adult": "false", "sort_by": "popularity.desc",
+            "vote_count.gte": 10, "page": 1}
+    async with httpx.AsyncClient(timeout=20) as client:
+        specs = [
+            {"with_original_language": "ja", "with_genres": "16"},
+            {"with_original_language": "hi", "region": "IN"},
+            {"with_original_language": "en"},
+        ]
+        responses = await asyncio.gather(*[
             client.get(f"{TMDB_BASE}/discover/movie", headers=headers,
-                       params={**auth_params, **params, "with_original_language": "hi", "region": "IN"}),
-            client.get(f"{TMDB_BASE}/discover/movie", headers=headers,
-                       params={**auth_params, **params, "with_original_language": "en"}),
-        )
+                       params={**auth_params, **base, **spec})
+            for spec in specs
+        ])
         for response in responses:
             response.raise_for_status()
-        hindi = responses[0].json().get("results", [])
-        english = responses[1].json().get("results", [])
-    mixed, seen = [], set()
-    for pair in zip(hindi, english):
-        for item in pair:
+    pools = [r.json().get("results", []) for r in responses]
+    quotas = [5, 10, 10]
+    chosen, seen = [], set()
+    for pool, quota in zip(pools, quotas):
+        added = 0
+        for item in pool:
+            if item.get("id") in seen or not item.get("poster_path"):
+                continue
+            seen.add(item["id"])
+            chosen.append(_to_movie(item))
+            added += 1
+            if added >= quota:
+                break
+    # If a language pool is temporarily short, top up from the other pools
+    # without duplicates, preserving the requested minimum total where possible.
+    for pool in pools:
+        for item in pool:
+            if len(chosen) >= min(limit, 25):
+                break
             if item.get("id") not in seen and item.get("poster_path"):
                 seen.add(item["id"])
-                mixed.append(_to_movie(item))
-    for item in [*hindi, *english]:
-        if item.get("id") not in seen and item.get("poster_path"):
-            seen.add(item["id"])
-            mixed.append(_to_movie(item))
-    return mixed[:max(1, min(limit, 40))]
-
+                chosen.append(_to_movie(item))
+    return chosen[:max(1, min(limit, 25))]
 
 async def get_movie(movie_id: int) -> Movie | None:
     headers, auth_params = _tmdb_auth()
