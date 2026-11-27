@@ -130,16 +130,16 @@ User request: {user_text!r}"""
         extra_moods: list[str] = []
         extra_keywords: list[str] = []
         language_hint = next((code for label, code in LANGUAGES.items() if label in text), None)
-        if re.search(r"\\banime\\b|\\bjapanese animation\\b", text):
+        if re.search(r"\banime\b|\bjapanese animation\b", text):
             extra_genres.append("animation")
             language_hint = "ja"
-        if re.search(r"\\bsuperheroes?\\b|\\bcomic book heroes?\\b", text):
+        if re.search(r"\bsuperheroes?\b|\bcomic book heroes?\b", text):
             extra_genres.extend(["action", "adventure"])
             extra_keywords.append("superhero")
-        if re.search(r"\\bsad\\b|\\bdepressed\\b|\\bheartbroken\\b|\\bfeeling low\\b", text):
+        if re.search(r"\bsad\b|\bdepressed\b|\bheartbroken\b|\bfeeling low\b", text):
             extra_genres.append("drama")
             extra_moods.append("sad")
-        if re.search(r"\\bfunny\\b|\\bsomething funny\\b|\\bcomedy\\b", text):
+        if re.search(r"\bfunny\b|\bsomething funny\b|\bcomedy\b", text):
             extra_genres.append("comedy")
         try:
             raw = self._gemini(prompt, json_mode=True)
@@ -167,8 +167,8 @@ User request: {user_text!r}"""
             # Deterministic fallback: never send the entire natural-language prompt
             # to TMDB as a title search (that caused generic/repeated results).
             text = user_text.lower()
-            genres = [name for name in GENRES if re.search(rf"\b{re.escape(name)}\b", text)]
-            moods = [name for name in MOOD_TERMS if name in text]
+            genres = list(dict.fromkeys([name for name in GENRES if re.search(rf"\b{re.escape(name)}\b", text)] + extra_genres))
+            moods = list(dict.fromkeys([name for name in MOOD_TERMS if name in text] + extra_moods))
             if any(term in text for term in ("feeling low", "bad day", "sad", "down")):
                 moods.append("sad")
             if any(term in text for term in ("funny", "laugh", "comedy")):
@@ -180,7 +180,8 @@ User request: {user_text!r}"""
             title_match = re.search(r"(?:similar to|like)\s+([A-Z][A-Za-z0-9:' -]{1,50}?)(?:[.!?,]|$)", user_text)
             query = title_match.group(1).strip() if title_match else ""
             return Preferences(query=query, genres=list(dict.fromkeys(genres)),
-                               moods=list(dict.fromkeys(moods)), language=language)
+                               moods=list(dict.fromkeys(moods)), language=language,
+                               keywords=extra_keywords)
 
     @staticmethod
     def _positive_int(value: Any) -> int | None:
@@ -228,6 +229,11 @@ User request: {user_text!r}"""
             candidates = list(merged.values())
         else:
             candidates = self._tmdb_get("/discover/movie", params).get("results", [])
+        if preferences.genres:
+            wanted = {GENRES[g] for g in preferences.genres if g in GENRES}
+            candidates = [m for m in candidates if wanted.intersection(m.get("genre_ids") or [])]
+        if preferences.language:
+            candidates = [m for m in candidates if m.get("original_language") == preferences.language]
         return candidates[: max(1, min(limit, 100))]
 
     @staticmethod
