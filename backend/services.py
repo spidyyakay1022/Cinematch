@@ -1,3 +1,4 @@
+import asyncio
 import os
 from pathlib import Path
 
@@ -72,6 +73,34 @@ async def search_movies(query: str) -> list[Movie]:
         )
         response.raise_for_status()
         return [_to_movie(item) for item in response.json().get("results", [])[:12]]
+
+
+async def featured_movies(limit: int = 20) -> list[Movie]:
+    """Return a balanced, deduplicated mix of popular Hindi and English films."""
+    headers, auth_params = _tmdb_auth()
+    params = {"include_adult": "false", "sort_by": "popularity.desc", "page": 1}
+    async with httpx.AsyncClient(timeout=15) as client:
+        responses = await asyncio.gather(
+            client.get(f"{TMDB_BASE}/discover/movie", headers=headers,
+                       params={**auth_params, **params, "with_original_language": "hi", "region": "IN"}),
+            client.get(f"{TMDB_BASE}/discover/movie", headers=headers,
+                       params={**auth_params, **params, "with_original_language": "en"}),
+        )
+        for response in responses:
+            response.raise_for_status()
+        hindi = responses[0].json().get("results", [])
+        english = responses[1].json().get("results", [])
+    mixed, seen = [], set()
+    for pair in zip(hindi, english):
+        for item in pair:
+            if item.get("id") not in seen and item.get("poster_path"):
+                seen.add(item["id"])
+                mixed.append(_to_movie(item))
+    for item in [*hindi, *english]:
+        if item.get("id") not in seen and item.get("poster_path"):
+            seen.add(item["id"])
+            mixed.append(_to_movie(item))
+    return mixed[:max(1, min(limit, 40))]
 
 
 async def get_movie(movie_id: int) -> Movie | None:
