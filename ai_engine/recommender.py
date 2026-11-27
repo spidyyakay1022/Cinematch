@@ -140,12 +140,12 @@ User request: {user_text!r}"""
                 extracted_query = explicit_title.group(1).strip()
             return Preferences(
                 query=extracted_query,
-                moods=[str(x).lower() for x in data.get("moods", [])][:5],
-                genres=[str(x).lower() for x in data.get("genres", [])][:8],
+                moods=list(dict.fromkeys([str(x).lower() for x in data.get("moods", [])] + extra_moods))[:5],
+                genres=list(dict.fromkeys([str(x).lower() for x in data.get("genres", [])] + extra_genres))[:8],
                 language=data.get("language"),
                 max_runtime=self._positive_int(data.get("max_runtime")),
                 min_rating=self._rating(data.get("min_rating")),
-                keywords=[str(x).lower() for x in data.get("keywords", [])][:8],
+                keywords=list(dict.fromkeys([str(x).lower() for x in data.get("keywords", [])] + extra_keywords))[:8],
             )
         except (CineMatchError, json.JSONDecodeError, TypeError, AttributeError):
             # Deterministic fallback: never send the entire natural-language prompt
@@ -199,6 +199,8 @@ User request: {user_text!r}"""
             params["with_runtime.lte"] = preferences.max_runtime
         if preferences.min_rating is not None:
             params["vote_average.gte"] = preferences.min_rating
+        if "superhero" in preferences.keywords:
+            params["with_keywords"] = "9715"
 
         if preferences.query.strip():
             # Search results are actual TMDB records; discover adds preference filtering.
