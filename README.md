@@ -93,17 +93,7 @@ Create a local environment file using the example:
 cp .env.example .env
 ```
 
-Add your own credentials to the local `.env` file:
 
-```env
-TMDB_READ_ACCESS_TOKEN=your_tmdb_read_access_token
-GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODEL=gemini-2.5-flash
-FRONTEND_ORIGIN=http://localhost:5173
-DB_PATH=cinematch.db
-```
-
-**Never commit real API keys or secrets.** Keep them in local environment files or your hosting provider's secret environment-variable settings.
 
 ### 3. Install backend dependencies
 
