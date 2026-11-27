@@ -46,6 +46,12 @@ MOOD_TERMS = {
     "relaxed": ["calm", "comforting", "easy-going"],
     "adventurous": ["journey", "exploration", "discovery"],
 }
+LANGUAGES = {
+    "bollywood": "hi", "hindi": "hi", "indian": "hi",
+    "hollywood": "en", "english": "en", "korean": "ko",
+    "k-drama": "ko", "japanese": "ja", "tamil": "ta",
+    "telugu": "te", "malayalam": "ml", "french": "fr",
+}
 
 
 class CineMatchError(RuntimeError):
@@ -107,6 +113,11 @@ Return JSON only with keys: query (string), moods (array of strings),
 genres (array of strings), language (ISO 639-1 code or null),
 max_runtime (integer minutes or null), min_rating (number 0-10 or null),
 keywords (array of strings).
+IMPORTANT: query must ONLY be a specific movie title if the user explicitly names
+a title or asks for movies similar to a named title. Never put the full request,
+genre, mood, or phrases like "recommend movies" in query.
+Map Bollywood/Hindi to language "hi"; Tamil to "ta"; Telugu to "te";
+Malayalam to "ml"; Korean to "ko"; Hollywood/English to "en".
 Do not invent preferences. Use empty arrays and null when unspecified.
 User request: {user_text!r}"""
         try:
@@ -122,11 +133,23 @@ User request: {user_text!r}"""
                 keywords=[str(x).lower() for x in data.get("keywords", [])][:8],
             )
         except (CineMatchError, json.JSONDecodeError, TypeError, AttributeError):
-            # Useful graceful fallback if Gemini is unavailable or returns malformed JSON.
+            # Deterministic fallback: never send the entire natural-language prompt
+            # to TMDB as a title search (that caused generic/repeated results).
             text = user_text.lower()
-            genres = [name for name in GENRES if name in text]
+            genres = [name for name in GENRES if re.search(rf"\\b{re.escape(name)}\\b", text)]
             moods = [name for name in MOOD_TERMS if name in text]
-            return Preferences(query=user_text, genres=genres, moods=moods)
+            if any(term in text for term in ("feeling low", "bad day", "sad", "down")):
+                moods.append("sad")
+            if any(term in text for term in ("funny", "laugh", "comedy")):
+                genres.append("comedy")
+            if any(term in text for term in ("scary", "frightening", "spooky")):
+                genres.append("horror")
+            language = next((code for label, code in LANGUAGES.items() if label in text), None)
+            # Only retain an explicitly named title after "like/similar to".
+            title_match = re.search(r"(?:similar to|like)\\s+([A-Z][A-Za-z0-9:' -]{1,50}?)(?:[.!?,]|$)", user_text)
+            query = title_match.group(1).strip() if title_match else ""
+            return Preferences(query=query, genres=list(dict.fromkeys(genres)),
+                               moods=list(dict.fromkeys(moods)), language=language)
 
     @staticmethod
     def _positive_int(value: Any) -> int | None:
@@ -155,6 +178,8 @@ User request: {user_text!r}"""
             params["with_genres"] = ",".join(map(str, genre_ids))
         if preferences.language:
             params["with_original_language"] = preferences.language
+            if preferences.language in {"hi", "ta", "te", "ml"}:
+                params["region"] = "IN"
         if preferences.max_runtime:
             params["with_runtime.lte"] = preferences.max_runtime
         if preferences.min_rating is not None:
@@ -225,9 +250,19 @@ User request: {user_text!r}"""
         ranked.sort(key=lambda item: (item["match_score"], item.get("vote_average") or 0), reverse=True)
         selected = ranked[: max(1, min(limit, 20))]
         if selected:
-            explanations = self.explain(selected, prefs)
-            for item, explanation in zip(selected, explanations):
-                item["why_recommended"] = explanation
+            # Reasons are deterministic and grounded in the actual TMDB record.
+            for item in selected:
+                names = [name for name, gid in GENRES.items() if gid in item.get("genre_ids", [])]
+                matched = [name.title() for name in names if name in prefs.genres]
+                if matched:
+                    reason = "Matched your requested genre: " + ", ".join(matched) + "."
+                elif prefs.language:
+                    reason = f"Selected from {prefs.language.upper()}-language movie results on TMDB."
+                else:
+                    rating = item.get("vote_average")
+                    reason = (f"TMDB user rating: {rating}/10." if rating is not None
+                              else "Selected from TMDB results matching your request.")
+                item["why_recommended"] = reason
         return {"preferences": prefs.__dict__, "count": len(selected), "recommendations": selected}
 
     def explain(self, movies: list[dict], prefs: Preferences) -> list[str]:
