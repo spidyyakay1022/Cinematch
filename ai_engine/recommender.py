@@ -45,7 +45,22 @@ MOOD_TERMS = {
     "mind-bending": ["mystery", "psychological", "twist"],
     "relaxed": ["calm", "comforting", "easy-going"],
     "adventurous": ["journey", "exploration", "discovery"],
+    "emotional": ["moving", "touching", "heartwarming", "family", "loss", "love"],
+    "funny": ["funny", "humorous", "comedy", "laugh"],
 }
+MOOD_GENRES = {
+    "happy": ["comedy", "family", "animation"],
+    "funny": ["comedy"],
+    "emotional": ["drama", "romance"],
+    "sad": ["drama"],
+    "romantic": ["romance"],
+    "scary": ["horror", "thriller"],
+    "mind-bending": ["mystery", "thriller", "science fiction"],
+    "relaxed": ["comedy", "family"],
+    "motivational": ["drama"],
+    "adventurous": ["adventure", "action"],
+}
+
 LANGUAGES = {
     "bollywood": "hi", "hindi": "hi", "indian": "hi",
     "hollywood": "en", "english": "en", "korean": "ko",
@@ -173,6 +188,13 @@ User request: {user_text!r}"""
                 moods.append("sad")
             if any(term in text for term in ("funny", "laugh", "comedy")):
                 genres.append("comedy")
+                moods.append("funny")
+            if any(term in text for term in ("emotional", "heartwarming", "tearjerker")):
+                moods.append("emotional")
+                genres.extend(["drama", "romance"])
+            if any(term in text for term in ("happy", "feel-good", "uplifting")):
+                moods.append("happy")
+                genres.extend(["comedy", "family", "animation"])
             if any(term in text for term in ("scary", "frightening", "spooky")):
                 genres.append("horror")
             language = language_hint
@@ -205,9 +227,15 @@ User request: {user_text!r}"""
             "include_adult": "false", "sort_by": "popularity.desc",
             "page": 1,
         }
-        genre_ids = [GENRES[g] for g in preferences.genres if g in GENRES]
+        mood_genres = [g for mood in preferences.moods for g in MOOD_GENRES.get(mood, [])]
+        requested_genres = list(dict.fromkeys([*preferences.genres, *mood_genres]))
+        genre_ids = [GENRES[g] for g in requested_genres if g in GENRES]
         if genre_ids:
-            params["with_genres"] = ",".join(map(str, genre_ids))
+            params["with_genres"] = "|".join(map(str, genre_ids))
+        # Exclude unreleased titles and low-signal records from recommendation lists.
+        from datetime import date
+        params["primary_release_date.lte"] = date.today().isoformat()
+        params["vote_count.gte"] = 25
         if preferences.language:
             params["with_original_language"] = preferences.language
             if preferences.language in {"hi", "ta", "te", "ml"}:
@@ -229,9 +257,12 @@ User request: {user_text!r}"""
             candidates = list(merged.values())
         else:
             candidates = self._tmdb_get("/discover/movie", params).get("results", [])
-        if preferences.genres:
-            wanted = {GENRES[g] for g in preferences.genres if g in GENRES}
+        if requested_genres:
+            wanted = {GENRES[g] for g in requested_genres if g in GENRES}
             candidates = [m for m in candidates if wanted.intersection(m.get("genre_ids") or [])]
+        from datetime import date
+        today = date.today().isoformat()
+        candidates = [m for m in candidates if m.get("release_date") and m["release_date"] <= today and m.get("poster_path") and int(m.get("vote_count") or 0) >= 25]
         if preferences.language:
             candidates = [m for m in candidates if m.get("original_language") == preferences.language]
         return candidates[: max(1, min(limit, 100))]
