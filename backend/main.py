@@ -49,6 +49,9 @@ allowed_origins = [
     for origin in os.getenv("FRONTEND_ORIGIN", "http://localhost:5173").split(",")
     if origin.strip()
 ]
+# Always allow the production Vercel frontend in addition to configured/local origins.
+if "https://cinematch-ai-production.vercel.app" not in allowed_origins:
+    allowed_origins.append("https://cinematch-ai-production.vercel.app")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
@@ -136,7 +139,7 @@ async def compare(a: int, b: int):
 
 
 @app.get("/api/movies/featured", response_model=list[Movie])
-async def featured(limit: int = Query(20, ge=1, le=40)):
+async def featured(limit: int = Query(25, ge=1, le=40)):
     try:
         return await services.featured_movies(limit)
     except (httpx.HTTPError, RuntimeError) as e:
