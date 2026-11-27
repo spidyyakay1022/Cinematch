@@ -67,17 +67,22 @@ class CineMatchEngine:
         timeout: float = 20.0,
     ):
         self.tmdb_token = tmdb_token or os.getenv("TMDB_READ_ACCESS_TOKEN")
+        self.tmdb_api_key = os.getenv("TMDB_API_KEY")
         self.gemini_api_key = gemini_api_key or os.getenv("GEMINI_API_KEY")
         self.gemini_model = gemini_model or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
         self.timeout = timeout
 
     def _tmdb_get(self, path: str, params: dict[str, Any] | None = None) -> dict:
-        if not self.tmdb_token:
-            raise CineMatchError("TMDB_READ_ACCESS_TOKEN is not configured.")
-        headers = {"Authorization": f"Bearer {self.tmdb_token}", "Accept": "application/json"}
+        if not self.tmdb_token and not self.tmdb_api_key:
+            raise CineMatchError("TMDB_READ_ACCESS_TOKEN or TMDB_API_KEY is not configured.")
+        headers = ({"Authorization": f"Bearer {self.tmdb_token}", "Accept": "application/json"}
+                   if self.tmdb_token else {})
+        request_params = dict(params or {})
+        if not self.tmdb_token and self.tmdb_api_key:
+            request_params["api_key"] = self.tmdb_api_key
         try:
             response = httpx.get(
-                f"{TMDB_BASE}{path}", headers=headers, params=params or {},
+                f"{TMDB_BASE}{path}", headers=headers, params=request_params,
                 timeout=self.timeout,
             )
             response.raise_for_status()
@@ -136,7 +141,7 @@ User request: {user_text!r}"""
             # Deterministic fallback: never send the entire natural-language prompt
             # to TMDB as a title search (that caused generic/repeated results).
             text = user_text.lower()
-            genres = [name for name in GENRES if re.search(rf"\\b{re.escape(name)}\\b", text)]
+            genres = [name for name in GENRES if re.search(rf"\b{re.escape(name)}\b", text)]
             moods = [name for name in MOOD_TERMS if name in text]
             if any(term in text for term in ("feeling low", "bad day", "sad", "down")):
                 moods.append("sad")
@@ -146,7 +151,7 @@ User request: {user_text!r}"""
                 genres.append("horror")
             language = next((code for label, code in LANGUAGES.items() if label in text), None)
             # Only retain an explicitly named title after "like/similar to".
-            title_match = re.search(r"(?:similar to|like)\\s+([A-Z][A-Za-z0-9:' -]{1,50}?)(?:[.!?,]|$)", user_text)
+            title_match = re.search(r"(?:similar to|like)\s+([A-Z][A-Za-z0-9:' -]{1,50}?)(?:[.!?,]|$)", user_text)
             query = title_match.group(1).strip() if title_match else ""
             return Preferences(query=query, genres=list(dict.fromkeys(genres)),
                                moods=list(dict.fromkeys(moods)), language=language)
