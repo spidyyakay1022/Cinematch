@@ -125,6 +125,22 @@ Map Bollywood/Hindi to language "hi"; Tamil to "ta"; Telugu to "te";
 Malayalam to "ml"; Korean to "ko"; Hollywood/English to "en".
 Do not invent preferences. Use empty arrays and null when unspecified.
 User request: {user_text!r}"""
+        text = user_text.lower()
+        extra_genres: list[str] = []
+        extra_moods: list[str] = []
+        extra_keywords: list[str] = []
+        language_hint = next((code for label, code in LANGUAGES.items() if label in text), None)
+        if re.search(r"\\banime\\b|\\bjapanese animation\\b", text):
+            extra_genres.append("animation")
+            language_hint = "ja"
+        if re.search(r"\\bsuperheroes?\\b|\\bcomic book heroes?\\b", text):
+            extra_genres.extend(["action", "adventure"])
+            extra_keywords.append("superhero")
+        if re.search(r"\\bsad\\b|\\bdepressed\\b|\\bheartbroken\\b|\\bfeeling low\\b", text):
+            extra_genres.append("drama")
+            extra_moods.append("sad")
+        if re.search(r"\\bfunny\\b|\\bsomething funny\\b|\\bcomedy\\b", text):
+            extra_genres.append("comedy")
         try:
             raw = self._gemini(prompt, json_mode=True)
             data = json.loads(raw)
@@ -140,9 +156,9 @@ User request: {user_text!r}"""
                 extracted_query = explicit_title.group(1).strip()
             return Preferences(
                 query=extracted_query,
-                moods=list(dict.fromkeys([str(x).lower() for x in data.get("moods", [])] + extra_moods))[:5],
-                genres=list(dict.fromkeys([str(x).lower() for x in data.get("genres", [])] + extra_genres))[:8],
-                language=data.get("language"),
+                moods=[x for x in dict.fromkeys([str(x).lower() for x in data.get("moods", [])] + extra_moods) if x in MOOD_TERMS or x in {"sad", "funny"}][:5],
+                genres=[x for x in dict.fromkeys([str(x).lower() for x in data.get("genres", [])] + extra_genres) if x in GENRES][:8],
+                language=language_hint or (data.get("language") if data.get("language") in set(LANGUAGES.values()) else None),
                 max_runtime=self._positive_int(data.get("max_runtime")),
                 min_rating=self._rating(data.get("min_rating")),
                 keywords=list(dict.fromkeys([str(x).lower() for x in data.get("keywords", [])] + extra_keywords))[:8],
@@ -159,7 +175,7 @@ User request: {user_text!r}"""
                 genres.append("comedy")
             if any(term in text for term in ("scary", "frightening", "spooky")):
                 genres.append("horror")
-            language = next((code for label, code in LANGUAGES.items() if label in text), None)
+            language = language_hint
             # Only retain an explicitly named title after "like/similar to".
             title_match = re.search(r"(?:similar to|like)\s+([A-Z][A-Za-z0-9:' -]{1,50}?)(?:[.!?,]|$)", user_text)
             query = title_match.group(1).strip() if title_match else ""
