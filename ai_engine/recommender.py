@@ -156,6 +156,11 @@ User request: {user_text!r}"""
             extra_moods.append("sad")
         if re.search(r"\bfunny\b|\bsomething funny\b|\bcomedy\b", text):
             extra_genres.append("comedy")
+            extra_moods.append("funny")
+        if re.search(r"\\bemotional\\b|\\bheartwarming\\b|\\btearjerker\\b", text):
+            extra_moods.append("emotional")
+        if re.search(r"\\bhappy\\b|\\bfeel[- ]good\\b|\\buplifting\\b", text):
+            extra_moods.append("happy")
         try:
             raw = self._gemini(prompt, json_mode=True)
             data = json.loads(raw)
