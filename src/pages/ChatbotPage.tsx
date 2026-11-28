@@ -14,7 +14,7 @@ export default function ChatbotPage() {
   const [selectedMood, setSelectedMood] = useState<string | null>(null)
 
   const handleSubmit = async (text: string): Promise<string> => {
-    const apiBase = (import.meta.env.VITE_API_URL || "https://cinematch-api-4o73.onrender.com").replace(/\\/$/, "");
+    const apiBase = import.meta.env.VITE_API_URL || "https://cinematch-api-4o73.onrender.com";
     try {
       const response = await fetch(`${apiBase}/api/chat`, {
         method: "POST",
