@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 
 type Movie = { id: number; title: string; year?: string | null; rating?: number | null; overview?: string; poster_url?: string | null; genres?: string[] }
-const API = (import.meta.env.VITE_API_URL || 'https://cinematch-api-4o73.onrender.com').replace(/\\/$/, '')
+const API = import.meta.env.VITE_API_URL || 'https://cinematch-api-4o73.onrender.com'
 const MOODS = [
   { label: '🎭 Drama & Thought-Provoking', query: 'Recommend a deeply thought-provoking drama that lingers in the mind' },
   { label: '⚡ Suspense & Thriller', query: 'I want a gripping edge-of-your-seat thriller under 2 hours' },
