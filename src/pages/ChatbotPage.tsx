@@ -14,30 +14,34 @@ export default function ChatbotPage() {
   const [selectedMood, setSelectedMood] = useState<string | null>(null)
 
   const handleSubmit = async (text: string): Promise<string> => {
-    // Dynamic CineMatch recommendation logic matching Documentation Specification
-    await new Promise(r => setTimeout(r, 2200))
-    const lower = text.toLowerCase()
-    
-    if (lower.includes('horror') || lower.includes('scary')) {
-      return "Recommended: 'Hereditary' (2018) & 'The Witch' (2015). Match Score: 94%. Selected for visceral dread, psychological terror, and immaculate atmosphere."
+    const apiBase = (import.meta.env.VITE_API_URL || "https://cinematch-api-4o73.onrender.com").replace(/\\/$/, "");
+    try {
+      const response = await fetch(`${apiBase}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.detail || `Recommendation service returned ${response.status}`);
+      }
+
+      const movies = Array.isArray(payload.movies) ? payload.movies : [];
+      if (!movies.length) {
+        return payload.reply || "I couldn't find a strong match. Try another genre, mood, or language.";
+      }
+
+      const movieLines = movies.slice(0, 8).map((movie: { title?: string; year?: string; rating?: number; overview?: string }, index: number) => {
+        const details = [movie.year, typeof movie.rating === "number" ? `Rating ${movie.rating.toFixed(1)}/10` : null].filter(Boolean).join(" · ");
+        return `${index + 1}. ${movie.title || "Untitled"}${details ? ` (${details})` : ""}${movie.overview ? ` — ${movie.overview.slice(0, 180)}` : ""}`;
+      });
+      return `${payload.reply || "Here are your movie matches:"}\\n\\n${movieLines.join("\\n")}`;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown network error";
+      return `I couldn't reach the CineMatch recommendation server. Please try again in a moment. (${message})`;
     }
-    if (lower.includes('comedy') || lower.includes('laugh') || lower.includes('fun')) {
-      return "Recommended: 'The Grand Budapest Hotel' (2014) & 'Palm Springs' (2020). Match Score: 91%. Fast-paced, witty dialogue with vibrant comedic charm."
-    }
-    if (lower.includes('thriller') || lower.includes('suspense') || lower.includes('edge')) {
-      return "Recommended: 'Sicario' (2015) & 'Prisoners' (2013). Match Score: 96%. Masterclass in tension, relentless pacing, and moral ambiguity."
-    }
-    if (lower.includes('sci-fi') || lower.includes('interstellar') || lower.includes('arrival') || lower.includes('thinking')) {
-      return "Recommended: 'Arrival' (2016) & 'Blade Runner 2049' (2017). Match Score: 98%. Recommended because you requested cerebral science fiction with profound philosophical depth."
-    }
-    if (lower.includes('romance') || lower.includes('love') || lower.includes('emotional')) {
-      return "Recommended: 'Portrait of a Lady on Fire' (2019) & 'Past Lives' (2023). Match Score: 95%. Poetic storytelling, unforgettable visual framing, and raw emotional resonance."
-    }
-    if (lower.includes('friend') || lower.includes('group') || lower.includes('popcorn')) {
-      return "Recommended: 'Knives Out' (2019) & 'Baby Driver' (2017). Match Score: 92%. Energetic, universally crowd-pleasing, and packed with thrilling twists."
-    }
-    return `Recommended for you: 'Parasite' (2019) & 'Dune: Part Two' (2024). Match Score: 95%. High critic praise, dynamic pacing, and genre-defying narratives grounded in TMDB records.`
-  }
+  };
 
   return (
     <div style={{
