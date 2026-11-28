@@ -148,9 +148,15 @@ User request: {user_text!r}"""
         if re.search(r"\banime\b|\bjapanese animation\b", text):
             extra_genres.append("animation")
             language_hint = "ja"
-        if re.search(r"\bsuperheroes?\b|\bcomic book heroes?\b", text):
+        # Theme-specific intent: Indian mythology and superhero movies.
+        if re.search(r"\b(indian|hindu)\s+mytholog(y|ical)\b|\bmythological\s+(movies?|films?)\b|\bmythology\b", text):
+            extra_genres.extend(["fantasy", "adventure"])
+            extra_keywords.extend(["indian mythology", "hindu mythology", "hindu deity"])
+        if re.search(r"\b(indian\s+)?superheroes?\b|\bcomic[- ]book heroes?\b|\bsuperhero movies?\b", text):
             extra_genres.extend(["action", "adventure"])
-            extra_keywords.append("superhero")
+            extra_keywords.extend(["superhero", "based on comic book", "superpower"])
+        if re.search(r"\bindian\s+superheroes?\b", text):
+            extra_keywords.append("indian superhero")
         if re.search(r"\bsad\b|\bdepressed\b|\bheartbroken\b|\bfeeling low\b", text):
             extra_genres.append("drama")
             extra_moods.append("sad")
@@ -226,6 +232,20 @@ User request: {user_text!r}"""
         except (TypeError, ValueError):
             return None
 
+    def _keyword_ids(self, terms: list[str]) -> list[int]:
+        """Resolve TMDB keyword names to IDs so theme searches use real tags."""
+        ids: list[int] = []
+        for term in terms:
+            try:
+                results = self._tmdb_get("/search/keyword", {"query": term}).get("results", [])
+                exact = next((item for item in results if str(item.get("name", "")).lower() == term.lower()), None)
+                chosen = exact or (results[0] if results else None)
+                if chosen and chosen.get("id"):
+                    ids.append(int(chosen["id"]))
+            except (CineMatchError, TypeError, ValueError):
+                continue
+        return list(dict.fromkeys(ids))
+
     def get_candidates(self, preferences: Preferences, limit: int = 40) -> list[dict]:
         """Fetch real movie records from TMDB discover/search endpoints."""
         params: dict[str, Any] = {
@@ -237,6 +257,15 @@ User request: {user_text!r}"""
         genre_ids = [GENRES[g] for g in requested_genres if g in GENRES]
         if genre_ids:
             params["with_genres"] = "|".join(map(str, genre_ids))
+        theme_terms = [term for term in preferences.keywords if term in {
+            "indian mythology", "hindu mythology", "hindu deity",
+            "superhero", "based on comic book", "superpower", "indian superhero",
+        }]
+        keyword_ids = self._keyword_ids(theme_terms)
+        if keyword_ids:
+            params["with_keywords"] = "|".join(map(str, keyword_ids))
+        if any(term in theme_terms for term in ("indian mythology", "hindu mythology", "hindu deity", "indian superhero")):
+            params["region"] = "IN"
         # Exclude unreleased titles and low-signal records from recommendation lists.
         from datetime import date
         params["primary_release_date.lte"] = date.today().isoformat()
@@ -249,9 +278,6 @@ User request: {user_text!r}"""
             params["with_runtime.lte"] = preferences.max_runtime
         if preferences.min_rating is not None:
             params["vote_average.gte"] = preferences.min_rating
-        if "superhero" in preferences.keywords:
-            params["with_keywords"] = "9715"
-
         if preferences.query.strip():
             # Search results are actual TMDB records; discover adds preference filtering.
             search = self._tmdb_get("/search/movie", {
