@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import MorphOrb from '../components/ui/ai-thinking-orb-and-input'
 
 const MOODS = [
@@ -12,6 +12,20 @@ const MOODS = [
 
 export default function ChatbotPage() {
   const [selectedMood, setSelectedMood] = useState<string | null>(null)
+  const [featuredMovies, setFeaturedMovies] = useState<Array<{ id: number; title: string; year?: string | null; rating?: number | null; overview?: string; poster_url?: string | null }>>([])
+  const [postersLoading, setPostersLoading] = useState(true)
+
+  useEffect(() => {
+    const apiBase = import.meta.env.VITE_API_URL || "https://cinematch-api-4o73.onrender.com"
+    fetch(`${apiBase}/api/movies/featured?limit=12`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Could not load featured movies")
+        return response.json()
+      })
+      .then((movies) => setFeaturedMovies(Array.isArray(movies) ? movies : []))
+      .catch((error) => console.error("Featured posters failed to load:", error))
+      .finally(() => setPostersLoading(false))
+  }, [])
 
   const handleSubmit = async (text: string): Promise<string> => {
     const apiBase = import.meta.env.VITE_API_URL || "https://cinematch-api-4o73.onrender.com";
@@ -206,6 +220,34 @@ export default function ChatbotPage() {
       }}>
         <MorphOrb onSubmit={handleSubmit} minThinkMs={2200} speed={1} />
       </div>
+
+      {/* Featured movie posters */}
+      <section style={{ width: '100%', maxWidth: 1180, margin: '0 auto 42px', padding: '0 24px', position: 'relative', zIndex: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'end', justifyContent: 'space-between', gap: 12, marginBottom: 18 }}>
+          <div>
+            <div style={{ color: '#F2B8C0', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 7 }}>Explore the collection</div>
+            <h2 style={{ color: '#fff', fontSize: 25, fontWeight: 700 }}>Popular movies</h2>
+          </div>
+          <span style={{ color: 'rgba(255,255,255,.45)', fontSize: 12 }}>Powered by TMDB</span>
+        </div>
+        {postersLoading ? (
+          <p style={{ color: 'rgba(255,255,255,.6)', fontSize: 14 }}>Loading movie posters…</p>
+        ) : featuredMovies.length ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(145px, 1fr))', gap: 16 }}>
+            {featuredMovies.filter((movie) => movie.poster_url).map((movie) => (
+              <article key={movie.id} style={{ minWidth: 0, overflow: 'hidden', borderRadius: 13, background: 'rgba(255,255,255,.055)', border: '1px solid rgba(255,255,255,.09)' }}>
+                <img src={movie.poster_url || ''} alt={movie.title} loading="lazy" style={{ display: 'block', width: '100%', aspectRatio: '2 / 3', objectFit: 'cover', background: '#21172d' }} onError={(event) => { event.currentTarget.style.visibility = 'hidden' }} />
+                <div style={{ padding: '10px 11px 12px' }}>
+                  <h3 style={{ color: '#fff', fontSize: 13, fontWeight: 650, lineHeight: 1.35, marginBottom: 5 }}>{movie.title}</h3>
+                  <p style={{ color: 'rgba(255,255,255,.58)', fontSize: 11 }}>{movie.year || '—'}{typeof movie.rating === 'number' ? ` · ★ ${movie.rating.toFixed(1)}` : ''}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p style={{ color: 'rgba(255,255,255,.6)', fontSize: 14 }}>Posters couldn't load right now. Please refresh in a moment.</p>
+        )}
+      </section>
 
       {/* Grounded Movie Features Banner */}
       <div style={{
