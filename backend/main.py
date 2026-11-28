@@ -169,7 +169,7 @@ async def recommend_mood(req: MoodRequest):
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest):
     try:
-        result = await run_in_threadpool(engine.recommend, req.message, 8)
+        result = await run_in_threadpool(engine.recommend, req.message, 10)
         movies = _to_recommendations(result)
         if movies:
             reply = f"I found {len(movies)} movies that match your request."
